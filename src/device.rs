@@ -1,14 +1,13 @@
 //! Scd30 device definitions
-//! 
+//!
 //! Copyright 2019 Ryan Kurte
-
 
 /// Scd30 default I2C address
 /// (note this is shifted left 1 bit on the wire)
 pub const DEFAULT_ADDRESS: u8 = 0x61;
 
 pub const I2C_WRITE_FLAG: u8 = 0x00;
-pub const I2C_READ_FLAG:  u8 = 0x01;
+pub const I2C_READ_FLAG: u8 = 0x01;
 
 pub const CRC_POLY: u8 = 0x31;
 pub const CRC_INIT: u8 = 0xff;
@@ -62,4 +61,3 @@ pub enum Command {
 
     GetFirmwareVersion = 0xD100,
 }
-

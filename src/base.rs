@@ -1,14 +1,14 @@
 //! Base communication implementation for interacting with Scd30 device
-//! 
+//!
 //! Copyright 2019 Ryan Kurte
 
 use core::fmt::Debug;
 
-use embedded_hal::blocking::i2c;
+use embedded_hal::i2c;
 use log::trace;
 
-use crate::{Error};
 use crate::device::*;
+use crate::Error;
 
 /// Base API for reading and writing to the device
 /// This should not be required by consumers, but is exposed to support alternate use (or in future provide ModBus support)
@@ -38,25 +38,20 @@ pub fn crc8(data: &[u8]) -> u8 {
         }
     }
 
-    // Apply final xor    
+    // Apply final xor
     crc ^ CRC_XOR
 }
 
 /// Base implementation for I2C devices
-impl <Conn, Err> Base<Err> for Conn where
-    Conn: i2c::Read<Error=Err> + i2c::Write<Error=Err> + i2c::WriteRead<Error=Err>,
+impl<Conn, Err> Base<Err> for Conn
+where
+    Conn: i2c::I2c<Error = Err>,
     Err: Debug,
 {
     fn write_command(&mut self, command: Command, data: Option<u16>) -> Result<(), Error<Err>> {
         let c = command as u16;
 
-        let mut buff: [u8; 5] = [
-            (c >> 8) as u8,
-            (c & 0xFF) as u8,
-            0,
-            0,
-            0,
-        ];
+        let mut buff: [u8; 5] = [(c >> 8) as u8, (c & 0xFF) as u8, 0, 0, 0];
 
         let len = match data {
             Some(d) => {
@@ -64,13 +59,14 @@ impl <Conn, Err> Base<Err> for Conn where
                 buff[3] = (d & 0xFF) as u8;
                 buff[4] = crc8(&buff[2..4]);
                 5
-            },
+            }
             None => 2,
         };
 
         trace!("Writing command: {:?} data: {:?}", c, data);
 
-        self.write(DEFAULT_ADDRESS | I2C_WRITE_FLAG, &buff[..len]).map_err(|e| Error::Conn(e) )
+        self.write(DEFAULT_ADDRESS | I2C_WRITE_FLAG, &buff[..len])
+            .map_err(|e| Error::Conn(e))
     }
 
     fn read_command(&mut self, command: Command, data: &mut [u8]) -> Result<(), Error<Err>> {
@@ -82,11 +78,11 @@ impl <Conn, Err> Base<Err> for Conn where
 
         // First write the read command
         self.write(DEFAULT_ADDRESS | I2C_WRITE_FLAG, &cmd)
-            .map_err(|e| Error::Conn(e) )?;
+            .map_err(|e| Error::Conn(e))?;
 
         // Then, read the data back
         self.read(DEFAULT_ADDRESS | I2C_READ_FLAG, data)
-            .map_err(|e| Error::Conn(e) )?;
+            .map_err(|e| Error::Conn(e))?;
 
         // Note: this two-phase approach is specified in the datasheet
 
@@ -113,6 +109,5 @@ mod test {
             let v = crc8(&t.0);
             assert_eq!(v, t.1);
         }
-        
     }
 }
